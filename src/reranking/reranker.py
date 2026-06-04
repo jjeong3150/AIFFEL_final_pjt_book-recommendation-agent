@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
-DRIVE_CACHE_DIR = "/content/drive/aiffel_final_pjt/MyDrive/models"
+DRIVE_CACHE_DIR = "/content/drive/MyDrive/aiffel_final_pjt/models"
 
 
 class LocalReranker:
