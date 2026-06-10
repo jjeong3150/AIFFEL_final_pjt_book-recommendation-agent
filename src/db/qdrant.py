@@ -8,18 +8,20 @@ import uuid
 
 
 class QdrantDB:
-    def __init__(self, vector_size=1024, default_limit=10, default_threshold=0.7):
+    def __init__(self, vector_size=1024, default_limit=10, default_threshold=0.7, timeout=300):
         """
         Parameters
         ----------
         vector_size        : 임베딩 모델 차원 수 (기본 bge-m3 = 1024)
         default_limit      : 기본 검색 결과 수
         default_threshold  : 기본 유사도 임계값 (0~1, 높을수록 엄격)
+        timeout            : Qdrant 요청 타임아웃(초), 기본 300초
         """
         load_dotenv()
         self.client = QdrantClient(
             url=os.getenv("QDRANT_URL"),
-            api_key=os.getenv("QDRANT_API_KEY")
+            api_key=os.getenv("QDRANT_API_KEY"),
+            timeout=timeout
         )
         self.vector_size = vector_size
         self.default_limit = default_limit
@@ -119,6 +121,34 @@ class QdrantDB:
             collection_name=collection_name,
             points=points
         )
+        print(f"✅ 데이터 적재 완료: {len(points)}건 → {collection_name}")
+
+    def insert_batch(self, collection_name, points, id_field=None, batch_size=200):
+        """
+        배치 단위로 나눠 적재 (대용량 / 타임아웃 방지용)
+
+        Parameters
+        ----------
+        batch_size : 한 번에 upsert할 포인트 수 (기본 200)
+        """
+        from tqdm import tqdm
+
+        if id_field is not None:
+            points = [
+                PointStruct(
+                    id=str(uuid.uuid5(uuid.NAMESPACE_DNS, str(p.payload[id_field]))),
+                    vector=p.vector,
+                    payload=p.payload
+                )
+                for p in points
+            ]
+
+        for i in tqdm(range(0, len(points), batch_size), desc=f"Uploading → {collection_name}"):
+            self.client.upsert(
+                collection_name=collection_name,
+                points=points[i:i + batch_size]
+            )
+
         print(f"✅ 데이터 적재 완료: {len(points)}건 → {collection_name}")
 
     # ─────────────────────────────────────────

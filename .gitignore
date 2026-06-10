@@ -3,4 +3,5 @@
 __pycache__/
 cache/
 data/raw/
+data/processed/
 .ipynb_checkpoints/
